@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model dietas {
+  id_dieta Int        @id @default(autoincrement())
+  dieta    String?    @db.VarChar(50)
+  usuarios usuarios[]
+}
+
+model roles {
+  id       Int        @id @default(autoincrement())
+  rol      String?    @db.VarChar(50)
+  usuarios usuarios[]
+}
+
+model usuarios {
+  email            String             @id @db.VarChar(50)
+  password         String?            @db.VarChar(255)
+  nombre           String?            @db.VarChar(50)
+  apellido         String?            @db.VarChar(50)
+  fecha_nacimiento DateTime?          @db.Date
+  ruta_foto_perfil String?            @db.VarChar(255)
+  foto_perfil      Bytes?
+  id_dieta         Int?
+  id_rol           Int?
+  estado           Boolean?
+  instagram        String?            @db.VarChar(50)
+  facebook         String?            @db.VarChar(50)
+  telefono         String?            @db.VarChar(50)
+  fecha_registro   DateTime?          @default(now()) @db.Timestamp(6)
+  colecciones      colecciones[]
+  entradas_blog    entradas_blog[]
+  eventos_usuarios eventos_usuarios[]
+  dietas           dietas?            @relation(fields: [id_dieta], references: [id_dieta], onDelete: NoAction, onUpdate: NoAction)
+  roles            roles?             @relation(fields: [id_rol], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model entradas_blog {
+  id            Int       @id @default(autoincrement())
+  fecha         DateTime? @default(now()) @db.Timestamp(6)
+  imagen        Bytes?
+  imagen_ruta   String?   @db.VarChar(255)
+  titulo        String?   @db.VarChar(50)
+  parrafo       String?   @db.VarChar(3000)
+  email_usuario String?   @db.VarChar(50)
+  categoria     String?   @db.VarChar(20)
+  evento        Boolean?
+  precio        Decimal?  @db.Decimal(9, 5)
+  id_evento     Int?
+  usuarios      usuarios? @relation(fields: [email_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  eventos       eventos?  @relation(fields: [id_evento], references: [id_evento], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model juegos {
+  id                 String  @id @db.VarChar(20)
+  age                String? @db.VarChar(3)
+  yearpublished      String? @db.VarChar(4)
+  minplayers         String? @db.VarChar(3)
+  maxplayers         String? @db.VarChar(3)
+  playingtime        String? @db.VarChar(3)
+  name               String? @db.VarChar(100)
+  description        String?
+  thumbnail          String?
+  image              String?
+  boardgamepublisher String? @db.VarChar(100)
+  boardgamehonor     String? @db.VarChar(100)
+  boardgamemechanic  String? @db.VarChar(100)
+  boardgamecategory  String? @db.VarChar(100)
+}
+
+model colecciones {
+  id_coleccion       Int                  @id @default(autoincrement())
+  mail_usuario       String?              @db.VarChar(50)
+  nombre             String?              @db.VarChar(50)
+  usuarios           usuarios?            @relation(fields: [mail_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  juegos_colecciones juegos_colecciones[]
+}
+
+model juegos_colecciones {
+  id           Int          @id @default(autoincrement())
+  id_juego     String?      @db.VarChar(20)
+  id_coleccion Int?
+  stock        Int?         @default(1)
+  precio       Decimal?     @default(0) @db.Decimal(13, 2)
+  colecciones  colecciones? @relation(fields: [id_coleccion], references: [id_coleccion], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model eventos {
+  id_evento         Int               @id @default(autoincrement())
+  titulo            String?           @db.VarChar(50)
+  fecha_inicio      DateTime?         @db.Timestamp(6)
+  precio            Decimal?          @db.Decimal(9, 5)
+  limite_asistentes Int?
+  entradas_blog     entradas_blog[]
+  eventos_usuarios  eventos_usuarios?
+}
+
+model eventos_usuarios {
+  id_evento     Int       @id
+  email_usuario String?   @db.VarChar(50)
+  usuarios      usuarios? @relation(fields: [email_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  eventos       eventos   @relation(fields: [id_evento], references: [id_evento], onDelete: NoAction, onUpdate: NoAction)
+}
