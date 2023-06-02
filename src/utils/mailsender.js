@@ -5,7 +5,7 @@ const transporter = nodemailer.createTransport(
   sgTransport({
     auth: {
       api_key:
-        "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",
+        "",
     },
   })
 );
