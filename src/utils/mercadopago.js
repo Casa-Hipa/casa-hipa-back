@@ -35,4 +35,32 @@ const checkOut = async (req, res) => {
     });
 };
 
-export { checkOut };
+const ventaTienda = async (req, res) => {
+  // Crea un objeto de preferencia
+  let preference = {
+    items: [
+      {
+        title: req.body.title,
+        unit_price: parseInt(req.body.price),
+        quantity: 1,
+      },
+    ],
+    back_urls: {
+      success: `http://localhost:4200/authentication/success-sell`,
+      failure: `http://localhost:4200/authentication/error-payment`,
+      pending: `http://localhost:4200/authentication/error-payment`,
+    },
+    auto_return: "all",
+  };
+
+  mercadopago.preferences
+    .create(preference)
+    .then(function (response) {
+      res.json({ url: response.body.sandbox_init_point });
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
+
+export { checkOut,ventaTienda };

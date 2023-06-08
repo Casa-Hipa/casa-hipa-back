@@ -74,4 +74,93 @@ const updateGameStore = async (req, res) => {
   }
 };
 
-export { getStoreIdsJuegosBGA, updateGameStore };
+const createFactura = async (req, res) => {
+  // const token = req.header("x-access-token");
+  // const tokenDecoded = jwt.verify(token, process.env.SECRET);
+  // const { id } = tokenDecoded;
+
+  const {email_usuario, detalles } =
+    req.body;
+  try {
+    // const ultimaFactura = await prisma.facturas.findFirst({
+    //   select: {
+    //     fecha: true,
+    //   },
+    //   orderBy: {
+    //     id: "desc",
+    //   },
+    // });
+
+    const fechaNuevaFactura = new Date(); // fecha de la nueva factura
+    // if(ultimaFactura) {
+    //   const fechaUltimaFactura = new Date(ultimaFactura.fecha); // fecha de la última factura
+    //   if (fechaUltimaFactura > fechaNuevaFactura) {
+    //     return res
+    //       .status(400)
+    //       .json(
+    //         "La fecha de la factura no puede ser menor a la fecha de la última factura"
+    //       );
+    //   }
+    // }
+
+
+    const data = await prisma.facturas.create({
+      data: {
+        fecha: fechaNuevaFactura,        
+        email_cliente:email_usuario, // id del cliente que está comprando       
+        // descuento: parseFloat(descuento), // descuento de la factura
+        estado: true,
+        detallefactura: {
+          createMany: {
+            data: detalles.map(
+              (df) =>
+                (df = {
+                  cantidad: parseInt(df.cantidad),
+                  precio: parseFloat(df.precio),
+                  id_juego: df.id_juego,
+                })
+            ),
+          },
+        },
+      },
+    });
+
+    if (data) {
+      await prisma.$transaction(
+        detalles.map((item) => {
+          const { id_juego, cantidad } = item;
+          return prisma.juegos_colecciones.updateMany({
+            where: {
+              id_juego: id_juego,
+              id_coleccion: 4 // id del store
+            },
+            data: {
+              stock: {
+                decrement: parseInt(cantidad),
+              },
+            },
+          });
+        })
+      );
+    }
+
+    // #region Pagos con Mercado Pago
+    
+    // if (parseInt(idTipoPago) === 2) {
+      
+    //   const preference = crearPreferencia(req, data.id);
+    //   const mp = await mercadoPago.preferences.create(preference);
+
+    //   return res.json(mp.body.init_point);
+    // }
+
+    res.status(200).json(data); // id de la factura creada
+  } catch (error) {
+    console.log(error);
+    res.status(400).json("Error al crear la factura");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+export { getStoreIdsJuegosBGA, updateGameStore, createFactura };

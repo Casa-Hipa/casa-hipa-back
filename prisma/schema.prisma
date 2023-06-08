@@ -37,6 +37,7 @@ model usuarios {
   colecciones      colecciones[]
   entradas_blog    entradas_blog[]
   eventos_usuarios eventos_usuarios[]
+  facturas         facturas[]
   dietas           dietas?            @relation(fields: [id_dieta], references: [id_dieta], onDelete: NoAction, onUpdate: NoAction)
   roles            roles?             @relation(fields: [id_rol], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -106,4 +107,25 @@ model eventos_usuarios {
   email_usuario String?   @db.VarChar(50)
   usuarios      usuarios? @relation(fields: [email_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
   eventos       eventos   @relation(fields: [id_evento], references: [id_evento], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model detallefactura {
+  id        Int       @id @default(autoincrement())
+  id_juego  String?   @db.VarChar(20)
+  idfactura Int?
+  cantidad  Int?
+  precio    Decimal?  @db.Decimal(13, 2)
+  descuento Int?      @default(0)
+  facturas  facturas? @relation(fields: [idfactura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model facturas {
+  id               Int              @id @default(autoincrement())
+  fecha            DateTime?        @db.Timestamp(6)
+  numero           Int              @default(autoincrement())
+  fechavencimiento DateTime?        @db.Timestamp(6)
+  email_cliente    String?          @db.VarChar(50)
+  estado           Boolean?
+  detallefactura   detallefactura[]
+  usuarios         usuarios?        @relation(fields: [email_cliente], references: [email], onDelete: NoAction, onUpdate: NoAction)
 }
