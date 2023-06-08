@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import env from 'dotenv'
+env.config()
 const app = express();
 // const jwt = require("jsonwebtoken");
 
@@ -53,6 +55,6 @@ app.use("/juegos", juegosRoutes);
 app.use("/store", storeRoutes);
 
 app.listen(3000, () => {
-  console.log("tuki, app andando...");
+  console.log(`app funcionando`);
 });
 export default app;
