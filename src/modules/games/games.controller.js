@@ -151,6 +151,32 @@ const deleteGameCol = async (req, res) => {
   } finally {
     await prisma.$disconnect;
   }
+
+
+
+};
+const getJuegosSinStock = async (req, res) => {
+  try {
+    let stringIds = "";      
+    const data = await prisma.$queryRawUnsafe(`select id_juego, stock 
+    from juegos_colecciones jc 
+    where jc.id_coleccion = '4'
+    and jc.stock < 10 order by jc.stock asc`)
+    data.forEach((game) => {
+      stringIds = stringIds + game.id_juego;
+      stringIds = stringIds + ",";
+    });
+    stringIds = stringIds.slice(0, -1);
+
+    res.status(200).json({ data: {stringIds, data}, status: 200 });
+  } catch (error) {
+    res.status(400).json({
+      mensaje: "Error al obtener juegos sin stock",
+      status: 400,
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
 };
 export {
   getJuegos,
@@ -158,4 +184,5 @@ export {
   getIdsJuegosBGA,
   deleteGameCol,
   saveGameStore,
+  getJuegosSinStock
 };

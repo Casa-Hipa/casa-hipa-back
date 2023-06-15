@@ -64,7 +64,7 @@ const updateGameStore = async (req, res) => {
       res.status(200).json({ data: data.stock, status: 200 });
     }
   } catch (error) {
-    console.log(error);
+    
     res.status(400).json({
       mensaje: "Error al grabar el juego en la coleccion",
       status: 400,
@@ -118,6 +118,8 @@ const createFactura = async (req, res) => {
                   cantidad: parseInt(df.cantidad),
                   precio: parseFloat(df.precio),
                   id_juego: df.id_juego,
+                  nombre_juego: df.nombre_juego,
+                  id_mecanica: df.id_mecanica
                 })
             ),
           },
@@ -163,4 +165,249 @@ const createFactura = async (req, res) => {
   }
 };
 
-export { getStoreIdsJuegosBGA, updateGameStore, createFactura };
+
+const getFacturas = async (req, res) => {
+  
+  try {
+    const data = await prisma.facturas.findMany({
+      include: {
+        usuarios: {
+          select: {
+            email: true,
+            nombre: true,
+            apellido:true,
+            telefono:true
+          },
+        },
+
+        detallefactura: true
+      },
+      orderBy: {
+        fecha: "desc",
+      }
+    });
+
+    const facturas = data.map((factura) => {
+      const {
+        id,
+        fecha,
+        usuarios,//: { nombrecompleto: usuario },       
+        detallefactura,
+      } = factura;
+      let total = 0
+      detallefactura.forEach(element => {
+        total = total + ( element.cantidad * element.precio )
+      });
+      // const detalles = detallefactura.map((item) => {
+      //   const {
+      //     id,
+      //     cantidad,
+      //     precio,
+      //     productos: { nombre: producto },
+      //   } = item;
+        // return { id, cantidad, precio: parseFloat(precio), producto };
+      //});
+      return {
+        id,
+        fecha,
+        usuarios,
+        detallefactura,
+        total
+      };
+    });
+
+    res.status(200).json(facturas);
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al obtener las facturas");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+const getTortaMecanicas = async (req, res) => {
+  
+  try {
+
+    const torta = await prisma.$queryRawUnsafe(`SELECT id_mecanica as name
+    ,sum(cantidad)::int AS value
+    ,sum(precio * cantidad) AS monto
+  FROM detallefactura
+  GROUP BY id_mecanica`)
+
+    
+
+    res.status(200).json(torta);
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al info de mecanicas");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+const getBarrasVentas = async (req, res) => {
+  const { fecha_ini, fecha_fin } = req.body;
+  let meses = []
+  let valores = []
+  try {
+
+    const torta = await prisma.$queryRawUnsafe(`SELECT to_char(g.series, 'YYYY-MM') AS label
+    ,COALESCE(SUM(df.cantidad * df.precio), 0) AS value
+  FROM generate_series($1::DATE, $2::DATE, '1 month') AS g(series)
+  LEFT JOIN facturas f ON to_char(f.fecha, 'YYYY-MM') = to_char(g.series, 'YYYY-MM')
+  LEFT JOIN detallefactura df ON f.id = df.idfactura
+  GROUP BY g.series
+  ORDER BY g.series`,`${fecha_ini}`,`${fecha_fin}`)
+
+    torta.forEach(element => {
+      meses.push(element.label)
+      valores.push(element.value)
+    });
+
+    res.status(200).json({meses,valores});
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al info de mecanicas");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+const getTortaEdades = async (req, res) => {
+  
+  try {
+
+    const torta = await prisma.$queryRawUnsafe(`SELECT CASE 
+		WHEN extract(year FROM age(u.fecha_nacimiento)) >= 8
+			AND extract(year FROM age(u.fecha_nacimiento)) <= 15
+			THEN 'Entre 8 y 15 años'
+		WHEN extract(year FROM age(u.fecha_nacimiento)) > 15
+			AND extract(year FROM age(u.fecha_nacimiento)) <= 25
+			THEN 'Entre 16 y 25 años'
+		WHEN extract(year FROM age(u.fecha_nacimiento)) > 25
+			AND extract(year FROM age(u.fecha_nacimiento)) <= 40
+			THEN 'Entre 26 y 40 años'
+		WHEN extract(year FROM age(u.fecha_nacimiento)) > 40
+			AND extract(year FROM age(u.fecha_nacimiento)) <= 60
+			THEN 'Entre 41 y 60 años'
+		WHEN extract(year FROM age(u.fecha_nacimiento)) > 60
+			THEN 'Mayor de 60 años'
+		END AS name
+	,count(*)::int as value
+	,sum(e.precio) AS monto
+FROM usuarios u
+INNER JOIN eventos_usuarios eu ON eu.email_usuario = u.email
+INNER JOIN eventos e ON e.id_evento = eu.id_evento
+WHERE u.fecha_nacimiento IS NOT NULL
+GROUP BY 1`)
+
+    
+
+    res.status(200).json(torta);
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al info de edades");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+const getAsistenciasEventos = async (req, res) => {
+  
+  try {
+    const data = await prisma.eventos.findMany({
+      // select:{
+      //   fecha_inicio:true,
+      //   titulo:true,
+      //   precio:true,
+      //   limite_asistentes:true,
+      // },      
+      include: {
+
+        eventos_usuarios:{       
+   
+          include:{
+            usuarios:{
+              select:{
+                nombre:true,
+                apellido:true,
+                email:true,
+                fecha_nacimiento:true
+              }
+            }
+          }     } 
+        
+
+      }
+      ,
+      orderBy:{
+        fecha_inicio: 'desc'
+      }
+
+    });
+
+    const facturas = data.map((factura) => {
+      const {
+        id_evento,
+        titulo,
+        fecha_inicio,
+        precio,
+        limite_asistentes,        
+        eventos_usuarios,
+      } = factura;
+      let asistentes = 0
+      eventos_usuarios.forEach(element => {
+        asistentes = asistentes + 1
+      });
+      let porcentajeAsistentes = 0
+      porcentajeAsistentes = (asistentes / limite_asistentes) * 100
+      return {
+        id_evento,
+        titulo,
+        fecha_inicio,  
+        precio,
+        limite_asistentes, 
+        asistentes,    
+        porcentajeAsistentes,  
+        eventos_usuarios,
+        
+      };
+    });
+
+    res.status(200).json(facturas);
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al obtener las asistencias");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+const getChartAreaAsistencias = async (req, res) => {
+  const { fecha_ini, fecha_fin } = req.body;
+  let meses = []
+  let valores = []
+  try {
+
+    const torta = await prisma.$queryRawUnsafe(`SELECT to_char(g.series, 'Month') AS month
+    ,COALESCE(SUM(precio), 0) AS value
+  FROM generate_series($1::DATE, $2::DATE, '1 month') AS g(series)
+  LEFT JOIN eventos f ON to_char(f.fecha_inicio, 'YYYY-MM') = to_char(g.series, 'YYYY-MM')
+  LEFT JOIN eventos_usuarios eu ON f.id_evento = eu.id_evento
+  GROUP BY g.series
+  ORDER BY g.series`,`${fecha_ini}`,`${fecha_fin}`)
+
+    torta.forEach(element => {
+      meses.push(element.month)
+      valores.push(element.value)
+    });
+
+    res.status(200).json({meses,valores});
+  } catch (error) {
+    console.log(error)
+    res.status(400).json("Error al info de mecanicas");
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+export { getChartAreaAsistencias,getStoreIdsJuegosBGA, updateGameStore, createFactura, getFacturas, getTortaMecanicas,getTortaEdades, getBarrasVentas , getAsistenciasEventos};

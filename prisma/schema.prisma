@@ -93,30 +93,34 @@ model juegos_colecciones {
 }
 
 model eventos {
-  id_evento         Int               @id @default(autoincrement())
-  titulo            String?           @db.VarChar(50)
-  fecha_inicio      DateTime?         @db.Timestamp(6)
-  precio            Decimal?          @db.Decimal(9, 5)
+  id_evento         Int                @id @default(autoincrement())
+  titulo            String?            @db.VarChar(50)
+  fecha_inicio      DateTime?          @db.Timestamp(6)
+  precio            Decimal?           @db.Decimal(9, 5)
   limite_asistentes Int?
   entradas_blog     entradas_blog[]
-  eventos_usuarios  eventos_usuarios?
+  eventos_usuarios  eventos_usuarios[]
 }
 
 model eventos_usuarios {
-  id_evento     Int       @id
-  email_usuario String?   @db.VarChar(50)
-  usuarios      usuarios? @relation(fields: [email_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
-  eventos       eventos   @relation(fields: [id_evento], references: [id_evento], onDelete: NoAction, onUpdate: NoAction)
+  id_evento     Int
+  email_usuario String   @db.VarChar(50)
+  usuarios      usuarios @relation(fields: [email_usuario], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  eventos       eventos  @relation(fields: [id_evento], references: [id_evento], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id_evento, email_usuario], map: "eventos_usuarios_pkey2")
 }
 
 model detallefactura {
-  id        Int       @id @default(autoincrement())
-  id_juego  String?   @db.VarChar(20)
-  idfactura Int?
-  cantidad  Int?
-  precio    Decimal?  @db.Decimal(13, 2)
-  descuento Int?      @default(0)
-  facturas  facturas? @relation(fields: [idfactura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id           Int       @id @default(autoincrement())
+  id_juego     String?   @db.VarChar(20)
+  idfactura    Int?
+  cantidad     Int?
+  precio       Decimal?  @db.Decimal(13, 2)
+  descuento    Int?      @default(0)
+  nombre_juego String?   @db.VarChar(100)
+  id_mecanica  String?   @db.VarChar(100)
+  facturas     facturas? @relation(fields: [idfactura], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model facturas {
